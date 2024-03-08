@@ -1,0 +1,217 @@
+---
+title: "ICA 2"
+author: "Daniel Adiele"
+date: "02.29.2024"
+output: pdf_document
+---
+
+## Learning Objectives
+
+In this assignment, you will practice your T-Test and R programming skills. You will use a fixed effects model and perform a difference-in-differences analysis. 
+Please answer the questions in a R markdown file and “Knit” the file so that I can see your analysis.
+
+## Experiments 
+
+Reanalysis of Gerber, Green and Larimer (2008)
+‘Why do large numbers of people vote, despite the fact that, as Hegel once observed, “the casting of a single vote is of no significance where there is a multitude of electors”?’
+
+This is the question that drives the experimental analysis of Gerber, Green and Larimer (2008). If it is irrational to vote because the costs of doings so (time spent informing oneself, time spent getting to the polling station, etc) are clearly greater than the gains to be made from voting (the probability that any individual voter will be decisive in an election is vanishingly small), then why do we observe millions of people voting in elections? One commonly proposed answer is that voters may have some sense of civic duty which drives them to the polls. Gerber, Green and Larimer investigate this idea empirically by priming voters to think about civic duty while also varying the amount of social pressure voters are subject to.
+In a field experiment in advance of the 2006 primary election in Michigan, nearly 350,000 voters were assigned at random to one of four treatment groups, where voters received mailouts which encouraged them to vote, or a control group where voters received no mailout. The treatment and control conditions were as follows:
+
+	Treatment 1 (“Civic duty”): Voters receive mailout reminding them that voting is a civic duty
+	Treatment 2 (“Hawthorne”): Voters receive mailout telling them that researchers would be studying their turnout based on public records
+	Treatment 3 (“Self”): Voters receive mailout displaying the record of turnout for their household in prior elections.
+	Treatment 4 (“Neighbors”): Voters receive mailout displaying the record of turnout for their household and their neighbours’ households in prior elections.
+	Control: Voters receive no mailout.
+	
+Load the replication data for Gerber, Green and Larimer (2008). This data is stored in a .Rdata format, which is the main way to save data in R. Therefore you will not be able to use read.csv but instead should use the function load.
+```{r eval=TRUE}
+# You will need to change the file location for the code to work.
+load("~/Downloads/ICA 2/gerber_green_larimer.Rdata")
+```
+
+Once you have loaded the data, familiarize yourself with the the gerber object which should be in your current environment. Use the str and summary functions to get an idea of what is in the data. There are 5 variables in this data.frame:
+Variable name	Description
+
+- voted:	Indicator for whether the voter voted in the 2006 election (1) or did not vote (0)
+- treatment:	Factor variable indicating which treatment arm (or control group) the voter was allocated to
+- sex:	Sex of the respondent
+- yob:	Year of birth of the respondent
+- p2004: Indicator for whether the voter voted in the 2004 election (Yes) or not (No)
+
+1. Calculate the turnout rates, "voted", for each of the experimental groups (4 treatments, 1 control). Calculate the number of individuals allocated to each group. Recreate table 2 on p. 38 of the paper.
+
+```{r eval=TRUE}
+library(modelsummary)
+datasummary((`PCT Voted`=voted) ~ Mean*treatment, data=gerber)
+
+```
+
+2. Use the following code to create three new variables in the data.frame. First, a variable that is equal to 1 if a respondent is female, and 0 otherwise. Second, a variable that measures the age of each voter in years at the time of the experiment (which was conducted in 2006). Third, a variable that is equal to 1 if the voter voted in the November 2004 Midterm election.
+```{r eval=TRUE}
+## Female dummy variable
+gerber$female <- ifelse(gerber$sex == "female", 1, 0)
+
+## Age variable
+gerber$age <- 2006 - gerber$yob
+
+## 2004 variable
+gerber$turnout04 <- ifelse(gerber$p2004 == "Yes", 1, 0)
+```
+3. Using these variables, conduct balance checks to establish whether there are potentially confounding differences between treatment and control groups. You do this by using the variables female, age, and turnout04 as response (dependent) variables. Use just the factor variable of treatment as your predictor (independent/explanatory) variable. Can you conclude from the results that randomization worked? How do you know?
+
+Based on the results gotten, we can conclude that randomization worked because there are no statistically significant differences between the treatment and control groups across the variables female, age, and turnout04. The coefficients for the treatment variable (Civic Duty, Hawthorne, Self, Neighbors) are not statistically significant (p > 0.05) for any of the response variables, indicating that there are no confounding differences between the groups. Additionally, the R-squared values equal zero, suggesting that the treatment variable does not explain a significant portion of the variation in the response variables. Therefore, randomization appears to have successfully balanced the groups, as there are no discernible differences between them based on the specified variables.Also based on the output gotten we also see that there is no difference in the means of the treatment group and controlled group across the variables female, age, and turnout04. These are some of the way we can tell that randomization worked.
+
+```{r eval=TRUE}
+exp1 <-lm(female ~ factor(treatment), data =gerber)
+exp2 <-lm(age ~ factor(treatment), data =gerber)
+exp3 <-lm(turnout04 ~ factor(treatment), data =gerber)
+library(modelsummary)
+modelsummary(list("Female"=exp1,"Age"=exp2,"Turnout"=exp3),coef_rename = coef_rename, star= TRUE)
+```
+4. Estimate the average treatment effects of the different treatment arms whilst controlling for the variables you created for the question above. How do these estimates differ from regression estimates of the treatment effects only (i.e. without controlling for other factors)? Why?
+
+The estimates of average treatment effects (ATE) while controlling for other variables differ from regression estimates of treatment effects because they account for potential confounding factors. Controlling for variables such as female, age, and turnout04 helps isolate the specific impact of each treatment arm on the outcome variable by removing the influence of these confounding factors. 
+Without controlling for other factors, regression estimates of treatment effects may be biased due to omitted variable bias, leading to less accurate and reliable estimates of the true treatment effects. Therefore, controlling for other factors provides a more nuanced and accurate understanding of the treatment effects by accounting for potential confounders and producing more robust estimates.
+
+Now based on the result gotten we can say they do not differ at all. Since the variables are truly independent of the error term, they will not affect the estimate, making them virtually the same values (meaning that randomization worked).
+
+
+```{r eval=TRUE}
+exp4 <-lm(voted ~ factor(treatment), data =gerber)
+# Now use the same equation above but add female, age, and turnout04
+exp5 <-lm(voted ~ factor (treatment)+female+age+turnout04, data=gerber)
+modelsummary(list(exp4,exp5),coef_rename = coef_rename, stars = TRUE)
+```
+5. Estimate the treatment effects separately for men and women. Do you note any differences in the impact of the treatment amongst these subgroups?
+
+There is not much difference between the two variables. Upon reviewing the provided results, it appears that there are no substantial differences in the impact of the treatment among men and women. Both groups exhibit similar patterns of treatment effects across the different treatment arms, as indicated by the comparable coefficients and statistical significance levels. This suggests that the treatment has a consistent effect on both men and women, without significant variations between the two subgroups.
+
+```{r eval=TRUE}
+# modify the equation below for just men
+exp6 <-lm(voted ~ factor(treatment), data =gerber[gerber$female==0, ])
+# modify the equation below for just women
+exp7 <-lm(voted ~ factor(treatment), data =gerber [gerber$female==1, ])
+modelsummary(list("Men"=exp6,"Women"=exp7),coef_rename = coef_rename, stars = TRUE)
+```
+
+
+Difference-in-Differences: Replication Exercise from the notes
+
+The data are about the expansion of the Earned Income Tax Credit. The sample only contains single women. This legislation is aimed at providing a tax break for low income individuals.  For some background on the subject, see
+
+Eissa, Nada, and Jeffrey B. Liebman. 1996. Labor Supply Responses to the Earned Income Tax Credit. Quarterly Journal of Economics. 111(2): 605-637.
+
+__Big Hint: Most of the code you need is in the notes__
+
+Variable Names and Definitions
+
+state: Factor variable containing the state's FIPS code.
+year: Calendar Year
+urate: unemployment rate for the state and year
+children: number of children in the household
+nonwhite: the person identifies as non-White
+finc: Family household income
+earn: Earned income
+unearn: unearned income
+age: Age of the mother in years
+ed: Years of schooling
+work: Indicator variable equal to 1 if the person is currently working
+
+The homework questions:
+
+1. Provide Descriptive Statistics for the data. Format nicely, not just R printout. Here is an example below. I have already provided the code to read in the data below. You need to create the data summary table.
+```{r echo=TRUE, results='asis',warning=FALSE,message=FALSE, eval=TRUE}
+require(foreign)
+eitc<-read.dta("https://github.com/CausalReinforcer/Stata/raw/master/eitc.dta")
+library(modelsummary)
+# the data mtcars is just an example. You need to replace it with eitc
+datasummary((`Unemployment Rate` = urate)+(`Children` = children)+(`Non-White` = nonwhite)+(`Family Income` = finc)+(`Earned Income`= earn)+(`Unearned Income` = unearn)+(`Age` = age)+(`Years of Education` = ed)+(`Work` = work) ~ mean + SD + Min + Max, data = eitc)
+```
+2. Calculate the sample means of all variables for (a) single women with no children, (b) single women with 1 child, and (c) single women with 2+ children. __Hint: Use the tidyverse to make this table. You can either filter the data or use dplyr to construct groups.You can even use data summary to do this step. Below is one example__
+```{r echo=TRUE, eval=TRUE}
+# Make the appropriate changes (i.e. data frame name and correct factor variable)
+eitc$nochild <- eitc$children
+eitc$nochild[eitc$nochild>2]<-2
+
+eitc$nochild <- factor(eitc$nochild, labels = c ("No Children","1 Child", "2 or more children"))
+
+datasummary((`Unemployment Rate` = urate)+(`Children` = children)+(`Non-White` = nonwhite)+(`Family Income` = finc)+(`Earned Income`= earn)+(`Unearned Income` = unearn)+(`Age` = age)+(`Years of Education` = ed)+(`Work` = work) ~ mean * nochild,data = eitc)
+```
+3. Construct a variable for the "treatment" called ANYKIDS. This variable should equal 1 if they have any children and zero otherwise. Create a second variable to indicate after the expansion (called POST93-should be 1 for 1994 and later).
+
+```{r eval=TRUE}
+# the EITC went into effect in the year 1994
+eitc$post93 = as.numeric(eitc$year >= 1994)
+# The EITC only affects women with at least one child, so the
+# treatment group will be all women with children.
+eitc$anykids = as.numeric(eitc$children >= 1)
+```
+
+
+4. Create a graph which plots mean annual employment rates by year (1991-1996) for single women with children (treatment) and without children (control). __Hint: you should have two lines on the same graph.__ I would suggest to use ggplot to make this plot. Here is some sample code. The variable "work" is your dependent variable.
+```{r echo=TRUE, eval=TRUE}
+# Take average value of 'work' by year, conditional on anykids
+minfo = aggregate(eitc$work, list(eitc$year,eitc$anykids == 1), mean)
+# rename column headings (variables)
+names(minfo) = c("YR","Treatment","LFPR")
+# Attach a new column with labels
+minfo$Group[1:6] = "Single women, no children"
+minfo$Group[7:12] = "Single women, children"
+#minfo
+require(ggplot2)    #package for creating nice plots
+qplot(YR, LFPR, data=minfo, geom=c("point","line"), colour=Group,
+xlab="Year", ylab="Labor Force Participation Rate")+geom_vline(xintercept = 1994)
+```
+
+5. Do the trends between the two groups appear to be parallel? Why is this important?
+
+Yes, because before 1994 the two trend lines (representing the two groups) are parallel and then afterwards that are shown not to be, this is important because we get to see the impact of the treatment on the treated group versus the controlled group. This is important because it supports/helps our argument that the change in trend of the treated group is influenced by the treatment given to the treated group else the two trends (the two groups) would have continued to be parallel. This parallel trend observation is very important because it verifies our difference in differences model has internal validity, which is important to our testing.
+
+6. Calculate the unconditional difference-in-difference estimates of the effect of the 1993 EITC expansion on employment of single women. __Hint: This means calculate the DID treatment effect by just subtracting means (i.e. no regression)__
+```{r eval=TRUE}
+a = sapply(subset(eitc, post93 == 0 & anykids == 0, select=work), mean)
+b = sapply(subset(eitc, post93 == 0 & anykids == 1, select=work), mean)
+c = sapply(subset(eitc, post93 == 1 & anykids == 0, select=work), mean)
+d = sapply(subset(eitc, post93 == 1 & anykids == 1, select=work), mean)
+# Compute the effect of the EITC on the employment of women with children:
+(d-c)-(b-a)
+```
+7. Now run a regression to estimate the conditional difference-in-difference estimate of the effect of the EITC. Use all women with children as the treatment group. __Hint: your answers for 6 and 7 should match.__
+
+```{r eval=TRUE}
+# Estimate a difference in difference regression. You should be using ANYKIDS and POST93 in your regression. Work is your dependent variable
+
+reg1 <- lm(work~post93*anykids, data = eitc)
+
+```
+
+
+8. Re-estimate this model including demographic characteristics as well as state and year fixed effect. Use the variable nonwhite, age, ed, and unearn as demographics.
+
+```{r eval=TRUE}
+library(fixest)
+reg2 <- feols(work~post93*anykids+nonwhite+age+ed+unearn|state+year, data=eitc)
+```
+9. Explain why can't you use finc, earn, and uearn in the same regression.
+
+Household income is the sum of earned income and unearned income. We can't use all the three variables in the same regression model because it would produce multicollinearity within the model, this is because household income is gotten from the sum of 'earn - earned income' and 'uearn - unearned income' and would lead to multicollinearity if all three were put together in the same regression model. 
+
+10. Estimate a "placebo" treatment model. Take data from only the pre-reform period. Use the same treatment and control groups. Introduce a placebo policy that begins in 1992 instead of 1994 (so 1992 and 1993 both have this fake policy).
+
+```{r eval=TRUE}
+eitc$post91 = as.numeric(eitc$year >= 1992)
+reg3 <- feols(work~post91*anykids+nonwhite+age+ed+unearn|state+year,
+data=eitc[eitc$year<1994, ])
+
+label <- c(work = "Work", post93 = "Post 1993", post91 = "Post 1991", anykids = "Any Kids", nonwhite = "Non-White", age = "Age", ed = "Education", unearn = "Unearned Income", state = "State", year = "Year")
+  
+modelsummary(list(reg1,reg2,reg3), vcov = c("robust","robust","robust"), stars = TRUE, coef_rename = label)
+```
+
+
+
+
+
+
+
