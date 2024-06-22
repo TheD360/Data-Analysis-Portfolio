@@ -1,4 +1,4 @@
-# Business-Analytics-Portfolio
+# Data-Analytics-Portfolio
 This repository contains all the data analytics and business analytics projects I have worked on over the past 2 years
 
 Projects from different aspects of my journey into Data/Business Analytics. It houses project in:
